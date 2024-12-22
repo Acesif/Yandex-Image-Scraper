@@ -13,31 +13,18 @@ import requests
 # Global stop flag
 stop_scraping_flag = False
 
-# def download_images(search_term, num_images, output_dir, progress_callback):
-#     global stop_scraping_flag
-#     search_engines = ["google", "bing", "yandex"]  # Added Yandex
-#     downloaded_count = 0
-#
-#     for engine in search_engines:
-#         if stop_scraping_flag or downloaded_count >= num_images:
-#             break
-#
-#         if engine == "google":
-#             downloaded_count += scrape_google(search_term, num_images - downloaded_count, output_dir, progress_callback)
-#         elif engine == "bing":
-#             downloaded_count += scrape_bing(search_term, num_images - downloaded_count, output_dir, progress_callback)
-#         elif engine == "yandex":
-#             downloaded_count += scrape_yandex(search_term, num_images - downloaded_count, output_dir, progress_callback)
-#
-#     progress_callback(100)  # Ensure progress bar reaches 100% at the end
-#     return downloaded_count
-
 def download_images(search_term, num_images, output_dir, progress_callback):
     global stop_scraping_flag
     downloaded_count = 0
 
     if not stop_scraping_flag and downloaded_count < num_images:
         downloaded_count += scrape_yandex(search_term, num_images, output_dir, progress_callback)
+
+    if downloaded_count <= num_images:
+        downloaded_count += scrape_google(search_term, (num_images - downloaded_count), output_dir, progress_callback)
+
+    if downloaded_count <= num_images:
+        downloaded_count += scrape_bing(search_term, (num_images - downloaded_count), output_dir, progress_callback)
 
     progress_callback(100)  # Ensure progress bar reaches 100% at the end
     return downloaded_count
@@ -55,66 +42,66 @@ def scroll_to_load_more(driver, scroll_pause_time=2):
         last_height = new_height
 
 
-# def scrape_google(search_term, limit, output_dir, progress_callback):
-#     global stop_scraping_flag
-#     options = webdriver.ChromeOptions()
-#     options.add_argument("--headless")
-#     driver = webdriver.Chrome(options=options)
-#
-#     url = f"https://www.google.com/search?q={search_term}&tbm=isch"
-#     driver.get(url)
-#     time.sleep(2)
-#
-#     scroll_to_load_more(driver)
-#
-#     images = driver.find_elements(By.CSS_SELECTOR, "img")
-#     count = 0
-#     for img in images:
-#         if stop_scraping_flag or count >= limit:
-#             break
-#         try:
-#             src = img.get_attribute("src")
-#             if src and src.startswith("http"):
-#                 if download_image(src, output_dir, f"google_{count + 1}.jpg"):
-#                     count += 1
-#                     progress_callback((count / limit) * 100)
-#         except Exception as e:
-#             print("Error downloading image:", e)
-#     driver.quit()
-#     return count
-#
-# def scrape_bing(search_term, limit, output_dir, progress_callback):
-#     global stop_scraping_flag
-#     options = webdriver.ChromeOptions()
-#     options.add_argument("--headless")
-#     driver = webdriver.Chrome(options=options)
-#
-#     url = f"https://www.bing.com/images/search?q={search_term}"
-#     driver.get(url)
-#     time.sleep(2)
-#
-#     scroll_to_load_more(driver)
-#
-#     images = driver.find_elements(By.CSS_SELECTOR, "img.mimg")
-#     count = 0
-#     for img in images:
-#         if stop_scraping_flag or count >= limit:
-#             break
-#         try:
-#             src = img.get_attribute("src")
-#             if src and src.startswith("http"):
-#                 if download_image(src, output_dir, f"bing_{count + 1}.jpg"):
-#                     count += 1
-#                     progress_callback((count / limit) * 100)
-#         except Exception as e:
-#             print("Error downloading image:", e)
-#     driver.quit()
-#     return count
+def scrape_google(search_term, limit, output_dir, progress_callback):
+    global stop_scraping_flag
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless=new")
+    driver = webdriver.Chrome(options=options)
+
+    url = f"https://www.google.com/search?q={search_term}&tbm=isch"
+    driver.get(url)
+    time.sleep(2)
+
+    scroll_to_load_more(driver)
+
+    images = driver.find_elements(By.CSS_SELECTOR, "img")
+    count = 0
+    for img in images:
+        if stop_scraping_flag or count >= limit:
+            break
+        try:
+            src = img.get_attribute("src")
+            if src and src.startswith("http"):
+                if download_image(src, output_dir, f"{count + 1}.jpg"):
+                    count += 1
+                    progress_callback((count / limit) * 100)
+        except Exception as e:
+            print("Error downloading image:", e)
+    driver.quit()
+    return count
+
+def scrape_bing(search_term, limit, output_dir, progress_callback):
+    global stop_scraping_flag
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless=new")
+    driver = webdriver.Chrome(options=options)
+
+    url = f"https://www.bing.com/images/search?q={search_term}"
+    driver.get(url)
+    time.sleep(2)
+
+    scroll_to_load_more(driver)
+
+    images = driver.find_elements(By.CSS_SELECTOR, "img.mimg")
+    count = 0
+    for img in images:
+        if stop_scraping_flag or count >= limit:
+            break
+        try:
+            src = img.get_attribute("src")
+            if src and src.startswith("http"):
+                if download_image(src, output_dir, f"{count + 1}.jpg"):
+                    count += 1
+                    progress_callback((count / limit) * 100)
+        except Exception as e:
+            print("Error downloading image:", e)
+    driver.quit()
+    return count
 
 def scrape_yandex(search_term, limit, output_dir, progress_callback):
     global stop_scraping_flag
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
+    options.add_argument("--headless=new")
     driver = webdriver.Chrome(options=options)
 
     url = f"https://yandex.com/images/search?text={search_term}"
@@ -141,7 +128,7 @@ def scrape_yandex(search_term, limit, output_dir, progress_callback):
                 decoded_img_url = "https:" + decoded_img_url
 
             if decoded_img_url.startswith("http"):
-                filename = f"yandex_{count+1}.jpg"
+                filename = f"{count+1}.jpg"
                 if download_image(decoded_img_url, output_dir, filename):
                     count += 1
                     progress_callback((count / limit) * 100)
